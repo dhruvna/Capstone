@@ -18,9 +18,14 @@ public:
 private:
     void timer_callback()
     {
-        cv::Mat image = cv::imread("src/boat.png", cv::IMREAD_COLOR);
-        sensor_msgs::msg::Image msg = *cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image).toImageMsg();
-        publisher_->publish(msg);
+        cv::Mat image = cv::imread("resource/boat.png", cv::IMREAD_COLOR);
+        if (image.empty()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to load image 'resource/boat.png'");
+            return;
+        }
+
+        auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image).toImageMsg();
+        publisher_->publish(*msg);
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
@@ -30,6 +35,7 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
+    auto node = std::make_shared<ImagePublisher>();
     rclcpp::spin(std::make_shared<ImagePublisher>());
     rclcpp::shutdown();
     return 0;

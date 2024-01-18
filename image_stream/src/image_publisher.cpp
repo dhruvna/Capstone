@@ -30,6 +30,8 @@ private:
 
         auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image).toImageMsg();
         publisher_->publish(*msg);
+        //print success to console
+        RCLCPP_INFO(this->get_logger(), "Published image: 'resource/boat.png'");
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;

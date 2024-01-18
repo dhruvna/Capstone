@@ -19,6 +19,8 @@ private:
         cv::Mat image = cv_bridge::toCvShare(msg, "bgr8")->image;
         cv::imshow("Received Image", image);
         cv::waitKey(10);
+        //print success to console
+        RCLCPP_INFO(this->get_logger(), "Received image");
     }
 
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(imageStream)
+project(image_stream)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
@@ -44,11 +44,11 @@ endif()
 install(TARGETS
   image_publisher
   image_subscriber
-  DESTINATION lib/${imageStream}
+  DESTINATION lib/${image_stream}
 )
 
 install(DIRECTORY resource/
-  DESTINATION share/${imageStream}/resource
+  DESTINATION share/${image_stream}/resource
 )
 
 # Export dependencies

@@ -44,11 +44,11 @@ endif()
 install(TARGETS
   image_publisher
   image_subscriber
-  DESTINATION lib/${image_stream}
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY resource/
-  DESTINATION share/${image_stream}/resource
+  DESTINATION share/${PROJECT_NAME}/resource
 )
 
 # Export dependencies

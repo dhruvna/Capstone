@@ -1,0 +1,11 @@
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/uninstall.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/image_stream_uninstall.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/image_publisher.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/image_subscriber.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/test.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/edit_cache.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/rebuild_cache.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/list_install_components.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/install.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/install/local.dir
+/home/lilrosdhruv/ros2_ws/src/Capstone/build/image_stream/CMakeFiles/install/strip.dir

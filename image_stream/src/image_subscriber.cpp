@@ -18,6 +18,11 @@ public:
 private:
     void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
     {
+        if (msg->header.frame_id == "end_of_stream") {
+            RCLCPP_INFO(this->get_logger(), "Video stream ended");
+            rclcpp::shutdown();
+            return;
+        }
         cv::Mat frame = cv_bridge::toCvCopy(msg, "bgr8")->image;
         cv::imshow("Video Frame", frame);
         cv::waitKey(1); // Use a small delay in waitKey for the display to be responsive

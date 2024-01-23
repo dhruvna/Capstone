@@ -14,9 +14,13 @@ public:
     video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4")
     {
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("video_frame", 10);
-        // Assuming a video with 30 FPS
+        //get video fps
+        double fps = video_capture_.get(cv::CAP_PROP_FPS);
+        //log it
+        RCLCPP_INFO(this->get_logger(), "Input Video: %fFPS", fps);
+        //create a timer that will send video at the corresponding frame rate
         timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(33), // Adjust this value to the frame rate of your video
+            std::chrono::nanoseconds(static_cast<int>(1000000000 / fps)),
             std::bind(&ImagePublisher::timer_callback, this));
     }
 
@@ -25,8 +29,13 @@ private:
     {
         cv::Mat frame;
         if (!video_capture_.read(frame)) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to capture frame");
-            rclcpp::shutdown(); // Optionally shut down if the video is over
+            // Send a final message to indicate the end of the stream
+            auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", cv::Mat()).toImageMsg();
+            msg->header.frame_id = "end_of_stream"; // Unique identifier
+            publisher_->publish(*msg);
+
+            RCLCPP_INFO(this->get_logger(), "End of video stream");
+            rclcpp::shutdown();
             return;
         }
         // Convert to a ROS2 sensor_msgs::msg::Image and publish

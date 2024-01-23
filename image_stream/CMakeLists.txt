@@ -18,7 +18,7 @@ find_package(image_transport REQUIRED)
 find_package(OpenCV REQUIRED)
 
 # Include directories
-include_directories(include)
+include_directories(include ${OpenCV_INCLUDE_DIRS})
 
 # Declare a C++ executable for the image publisher
 add_executable(image_publisher src/image_publisher.cpp)
@@ -47,8 +47,9 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY resource/
-  DESTINATION share/${PROJECT_NAME}/resource
+install(DIRECTORY 
+  resource
+  DESTINATION share/${PROJECT_NAME}
 )
 
 # Export dependencies

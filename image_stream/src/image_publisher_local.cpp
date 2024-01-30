@@ -5,10 +5,6 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/videoio.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h> 
 
 class ImagePublisher : public rclcpp::Node
 {
@@ -26,7 +22,6 @@ public:
         timer_ = this->create_wall_timer(
             std::chrono::nanoseconds(static_cast<int>(1000000000 / fps)),
             std::bind(&ImagePublisher::timer_callback, this));
-        setupSocket(8080);
     }
 
 private:
@@ -34,41 +29,23 @@ private:
     {
         cv::Mat frame;
         if (!video_capture_.read(frame)) {
+            // Send a final message to indicate the end of the stream
+            auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", cv::Mat()).toImageMsg();
+            msg->header.frame_id = "end_of_stream"; // Unique identifier
+            publisher_->publish(*msg);
+
             RCLCPP_INFO(this->get_logger(), "End of video stream");
             rclcpp::shutdown();
             return;
         }
-        sendImageThroughSocket(frame);
-    }
-
-    void setupSocket(int port) {
-        sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sock < 0) {
-            perror("socket creation failed");
-            exit(EXIT_FAILURE);
-        }
-
-        memset(&servaddr, 0, sizeof(servaddr));
-
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_addr.s_addr = INADDR_ANY;
-        servaddr.sin_port = htons(port);
-    }
-
-    void sendImageThroughSocket(const cv::Mat &frame) {
-        std::vector<uchar> buffer;
-        cv::imencode(".jpg", frame, buffer);
-
-        if(sendto(sock, buffer.data(), buffer.size(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-            perror("sendto failed");
-        }
+        // Convert to a ROS2 sensor_msgs::msg::Image and publish
+        auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
+        publisher_->publish(*msg);
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
     cv::VideoCapture video_capture_;
-    int sock;
-    struct sockaddr_in servaddr;
 };
 
 int main(int argc, char *argv[])

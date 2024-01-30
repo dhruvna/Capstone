@@ -5,6 +5,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 
 const int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
@@ -25,7 +26,7 @@ public:
     void receiveImageThroughSocket() {
         while (rclcpp::ok()) {
             std::vector<uchar> buf(MAX_BUFFER_SIZE);
-            int bytes_received = recv(sockfd, buffer, MAX_BUFFER_SIZE, 0);
+            int bytes_received = recv(sockfd, buf.data(), MAX_BUFFER_SIZE, 0);
             if (bytes_received < 0) {
                 perror("recv failed");
                 rclcpp::shutdown();

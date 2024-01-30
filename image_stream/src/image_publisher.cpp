@@ -66,7 +66,7 @@ private:
     }
 
     void sendImageThroughSocket(const cv::Mat &frame) {
-        int client_fd = accept(server_fd, (struct sockaddr *)&servaddr, (socklen_t*)&addrlen);
+        int client_fd = accept(server_fd, (struct sockaddr *)&servaddr, (socklen_t*)&client_len);
         if (client_fd < 0) {
             perror("accept failed");
             exit(EXIT_FAILURE);

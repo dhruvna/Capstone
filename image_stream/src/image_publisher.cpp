@@ -42,33 +42,53 @@ private:
     }
 
     void setupSocket(int port) {
-        sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sock < 0) {
+        server_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (server_fd < 0) {
             perror("socket creation failed");
             exit(EXIT_FAILURE);
         }
 
-        memset(&servaddr, 0, sizeof(servaddr));
-
         servaddr.sin_family = AF_INET;
         servaddr.sin_addr.s_addr = INADDR_ANY;
         servaddr.sin_port = htons(port);
+
+        if (bind(server_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+            perror("bind failed");
+            exit(EXIT_FAILURE);
+        }
+
+        if (listen(server_fd, 3) < 0) {
+            perror("listen failed");
+            exit(EXIT_FAILURE);
+        }
+
+        RCLCPP_INFO(this->get_logger(), "Server Listening on Port %d", port);
     }
 
     void sendImageThroughSocket(const cv::Mat &frame) {
+        int client_fd = accept(server_fd, (struct sockaddr *)&servaddr, (socklen_t*)&addrlen);
+        if (client_fd < 0) {
+            perror("accept failed");
+            exit(EXIT_FAILURE);
+        }
+
         std::vector<uchar> buffer;
         cv::imencode(".jpg", frame, buffer);
 
-        if(sendto(sock, buffer.data(), buffer.size(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-            perror("sendto failed");
+        int bytes_sent = send(client_fd, buffer.data(), buffer.size(), 0);
+        if (bytes_sent < 0) {
+            perror("send failed");
         }
+
+        close(client_fd); // Close the connection after sending
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
     cv::VideoCapture video_capture_;
-    int sock;
-    struct sockaddr_in servaddr;
+    int server_fd;
+    struct sockaddr_in servaddr, client;
+    socklen_t client_len = sizeof(client);
 };
 
 int main(int argc, char *argv[])

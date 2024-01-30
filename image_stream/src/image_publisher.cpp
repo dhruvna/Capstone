@@ -38,6 +38,7 @@ private:
             rclcpp::shutdown();
             return;
         }
+        sendTestMessage();
         sendImageThroughSocket(frame);
     }
 
@@ -82,6 +83,23 @@ private:
 
         close(client_fd); // Close the connection after sending
     }
+
+    void sendTestMessage() {
+        const char* test_message = "Hello from Publisher";
+        int client_fd = accept(server_fd, (struct sockaddr *)&client, &client_len);
+        if (client_fd < 0) {
+            perror("accept failed");
+            return; // Don't exit the whole program, just return from this function
+        }
+
+        int bytes_sent = send(client_fd, test_message, strlen(test_message), 0);
+        if (bytes_sent < 0) {
+            perror("send failed");
+        }
+
+        close(client_fd); // Close the connection after sending
+    }
+
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;

@@ -22,6 +22,19 @@ public:
     ~ImageSubscriber() {
         close(sockfd);
     }
+    void receiveAndDisplayImage() {
+        while (rclcpp::ok()) {
+            char buffer[1024] = {0}; // Increase buffer size if needed
+            int bytes_received = recv(sockfd, buffer, 1024, 0);
+            if (bytes_received < 0) {
+                perror("recv failed");
+                rclcpp::shutdown();
+                break;
+            } else if (bytes_received > 0) {
+                RCLCPP_INFO(this->get_logger(), "Received message: %s", buffer);
+            }
+        }
+    }
 
     void receiveImageThroughSocket() {
         while (rclcpp::ok()) {
@@ -66,6 +79,7 @@ private:
             rclcpp::shutdown();
             exit(EXIT_FAILURE);
         }
+        RCLCPP_INFO(this->get_logger(), "Connected to server on Port %d", port);
     }
 
     int sockfd;
@@ -76,6 +90,7 @@ int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
     auto image_subscriber = std::make_shared<ImageSubscriber>();
+    image_subscriber->receiveAndDisplayImage();
     image_subscriber->receiveImageThroughSocket();
     rclcpp::shutdown();
     return 0;

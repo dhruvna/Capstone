@@ -57,7 +57,7 @@ private:
         cv::VideoCapture video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4");
         cv::Mat frame;
         std::vector<uchar> buffer;
-        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 80};
+        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 50};
         double fps = video_capture_.get(cv::CAP_PROP_FPS);
         int frame_count = 0;
         auto start = std::chrono::steady_clock::now();
@@ -72,7 +72,7 @@ private:
                 int seconds = static_cast<int>(elapsed.count()) % 60;
 
                 RCLCPP_INFO(this->get_logger(), "Streaming... Time Elapsed: %02d:%02d", minutes, seconds);
-                
+
                 cv::imencode(".jpg", frame, buffer, compression_params);
                 sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
                 std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000000 / fps)));

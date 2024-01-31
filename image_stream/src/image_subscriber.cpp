@@ -1,97 +1,95 @@
 #include <memory>
-#include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <arpa/inet.h>
+
+#include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
+#include <cstring>
 #include <unistd.h>
-
-const int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
+#include "rclcpp/rclcpp.hpp"
 
 class ImageSubscriber : public rclcpp::Node
 {
 public:
-    ImageSubscriber() 
-    : Node("image_subscriber")
+    ImageSubscriber() : Node("image_subscriber"), sockfd(-1)
     {
-        setupSocket("172.24.142.174", 8080);
-    }
+        this->declare_parameter<int>("server_port", 8080);
+        this->get_parameter("server_port", server_port);
 
-    ~ImageSubscriber() {
-        close(sockfd);
+        init_udp_socket();
     }
-    void receiveAndDisplayImage() {
-        while (rclcpp::ok()) {
-            char buffer[1024] = {0}; // Increase buffer size if needed
-            int bytes_received = recv(sockfd, buffer, 1024, 0);
-            if (bytes_received < 0) {
-                perror("recv failed");
-                rclcpp::shutdown();
-                break;
-            } else if (bytes_received > 0) {
-                RCLCPP_INFO(this->get_logger(), "Received message: %s", buffer);
-            }
+    ~ImageSubscriber() 
+    {
+        if(sockfd != -1)
+        {
+            close(sockfd);
         }
     }
 
-    void receiveImageThroughSocket() {
-        while (rclcpp::ok()) {
-            std::vector<uchar> buf(MAX_BUFFER_SIZE);
-            int bytes_received = recv(sockfd, buf.data(), MAX_BUFFER_SIZE, 0);
-            if (bytes_received < 0) {
-                perror("recv failed");
-                rclcpp::shutdown();
+private:
+    void init_udp_socket() 
+    {
+        if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Socket creation failed.");
+            exit(EXIT_FAILURE);
+        }
+        
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_port = htons(server_port);
+        servaddr.sin_addr.s_addr = INADDR_ANY;
+
+        if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Bind failed");
+            exit(EXIT_FAILURE);
+        }
+        start_receiving();
+    }
+
+    void start_receiving() 
+    {
+        char buffer[65507];
+        struct sockaddr_in cliaddr;
+        unsigned int len = sizeof(cliaddr);
+
+        while (rclcpp::ok()) 
+        {
+            int n = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&cliaddr, &len);
+            buffer[n] = '\0';
+
+            std::string received_msg(buffer);
+            // RCLCPP_INFO(this->get_logger(), "Received message: %s", received_msg.c_str());
+
+            if(received_msg == "END OF STREAM") {
+                RCLCPP_INFO(this->get_logger(), "End of stream detected.");
                 break;
-            }
-            // Check if any data is received
-            if (bytes_received > 0) {
-                cv::Mat frame = cv::imdecode(buf, cv::IMREAD_COLOR);
-                if (!frame.empty()) {
-                    cv::imshow("Received Image", frame);
+            } else {
+                std::vector<uchar> data(buffer, buffer+n);
+                cv::Mat frame = cv::imdecode(cv::Mat(data), cv::IMREAD_COLOR);
+                
+                if(!frame.empty()) 
+                {
+                    cv::imshow("Received Frame", frame);
                     cv::waitKey(1);
                 }
             }
         }
     }
 
-private:
-    void setupSocket(const char* ip, int port) {
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            perror("socket creation failed");
-            rclcpp::shutdown();
-            exit(EXIT_FAILURE);
-        }
-
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(port);
-
-        if(inet_pton(AF_INET, ip, &servaddr.sin_addr) <= 0) {
-            perror("Invalid address/ Address not supported");
-            rclcpp::shutdown();
-            exit(EXIT_FAILURE);
-        }
-
-        if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-            perror("Connection Failed");
-            rclcpp::shutdown();
-            exit(EXIT_FAILURE);
-        }
-        RCLCPP_INFO(this->get_logger(), "Connected to server on Port %d", port);
-    }
-
     int sockfd;
-    struct sockaddr_in servaddr, cliaddr;
+    struct sockaddr_in servaddr;
+    int server_port;
 };
 
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
     auto image_subscriber = std::make_shared<ImageSubscriber>();
-    image_subscriber->receiveAndDisplayImage();
-    image_subscriber->receiveImageThroughSocket();
     rclcpp::shutdown();
     return 0;
 }

@@ -1,112 +1,84 @@
 #include <memory>
-#include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/videoio.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <arpa/inet.h>
+
+#include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h> 
+#include <cstring>
+#include <unistd.h>
+#include "rclcpp/rclcpp.hpp"
 
 class ImagePublisher : public rclcpp::Node
 {
 public:
-    ImagePublisher() 
-    : Node("image_publisher"), 
-    video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4")
+    ImagePublisher() : Node("image_publisher"), sockfd(-1)
     {
-        publisher_ = this->create_publisher<sensor_msgs::msg::Image>("video_frame", 10);
-        //get video fps
-        double fps = video_capture_.get(cv::CAP_PROP_FPS);
-        //log it
-        RCLCPP_INFO(this->get_logger(), "Input Video: %fFPS", fps);
-        //create a timer that will send video at the corresponding frame rate
-        timer_ = this->create_wall_timer(
-            std::chrono::nanoseconds(static_cast<int>(1000000000 / fps)),
-            std::bind(&ImagePublisher::timer_callback, this));
-        setupSocket(8080);
+        this->declare_parameter<std::string>("client_ip", "127.0.0.1");
+        this->declare_parameter<int>("client_port", 8080);
+
+        this->get_parameter("client_ip", client_ip);
+        this->get_parameter("client_port", client_port);
+
+        init_udp_socket();
+    }
+    ~ImagePublisher()
+    {
+        if(sockfd != -1)
+        {
+            close(sockfd);
+        }
     }
 
 private:
-    void timer_callback()
+    void init_udp_socket() 
     {
+        if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Socket creation failed.");
+            exit(EXIT_FAILURE);
+        }
+        
+        memset(&cliaddr, 0, sizeof(cliaddr));
+        cliaddr.sin_family = AF_INET;
+        cliaddr.sin_port = htons(8080);
+        // cliaddr.sin_addr.s_addr = INADDR_ANY;
+        cliaddr.sin_addr.s_addr = inet_addr(client_ip.c_str());
+
+        start_sending();
+    }
+
+    void start_sending()
+    {
+        cv::VideoCapture video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4");
         cv::Mat frame;
-        if (!video_capture_.read(frame)) {
-            RCLCPP_INFO(this->get_logger(), "End of video stream");
-            rclcpp::shutdown();
-            return;
-        }
-        sendTestMessage();
-        sendImageThroughSocket(frame);
-    }
-
-    void setupSocket(int port) {
-        server_fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (server_fd < 0) {
-            perror("socket creation failed");
-            exit(EXIT_FAILURE);
-        }
-
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_addr.s_addr = INADDR_ANY;
-        servaddr.sin_port = htons(port);
-
-        if (bind(server_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-            perror("bind failed");
-            exit(EXIT_FAILURE);
-        }
-
-        if (listen(server_fd, 3) < 0) {
-            perror("listen failed");
-            exit(EXIT_FAILURE);
-        }
-
-        RCLCPP_INFO(this->get_logger(), "Server Listening on Port %d", port);
-    }
-
-    void sendImageThroughSocket(const cv::Mat &frame) {
-        int client_fd = accept(server_fd, (struct sockaddr *)&servaddr, (socklen_t*)&client_len);
-        if (client_fd < 0) {
-            perror("accept failed");
-            exit(EXIT_FAILURE);
-        }
-
         std::vector<uchar> buffer;
-        cv::imencode(".jpg", frame, buffer);
-
-        int bytes_sent = send(client_fd, buffer.data(), buffer.size(), 0);
-        if (bytes_sent < 0) {
-            perror("send failed");
+        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 80};
+        double fps = video_capture_.get(cv::CAP_PROP_FPS);
+        //log it
+        RCLCPP_INFO(this->get_logger(), "Input Video: %fFPS", fps);
+        while (rclcpp::ok() && video_capture_.isOpened())
+        {
+            if(video_capture_.read(frame)) {
+                cv::imencode(".jpg", frame, buffer, compression_params);
+                sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(static_cast<int>(1000000000 / fps)));
+            } else {
+                std::string end_msg = "END OF STREAM";
+                sendto(sockfd, end_msg.c_str(), end_msg.length(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
+                RCLCPP_INFO(this->get_logger(), end_msg.c_str());  
+                break;      
+            }      
         }
-
-        close(client_fd); // Close the connection after sending
     }
-
-    void sendTestMessage() {
-        const char* test_message = "Hello from Publisher";
-        int client_fd = accept(server_fd, (struct sockaddr *)&client, &client_len);
-        if (client_fd < 0) {
-            perror("accept failed");
-            return; // Don't exit the whole program, just return from this function
-        }
-
-        int bytes_sent = send(client_fd, test_message, strlen(test_message), 0);
-        if (bytes_sent < 0) {
-            perror("send failed");
-        }
-
-        close(client_fd); // Close the connection after sending
-    }
-
-
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
-    rclcpp::TimerBase::SharedPtr timer_;
-    cv::VideoCapture video_capture_;
-    int server_fd;
-    struct sockaddr_in servaddr, client;
-    socklen_t client_len = sizeof(client);
+    int sockfd;
+    struct sockaddr_in cliaddr;
+    std::string client_ip;
+    int client_port;
 };
 
 int main(int argc, char *argv[])

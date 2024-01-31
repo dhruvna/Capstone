@@ -59,11 +59,20 @@ private:
         std::vector<uchar> buffer;
         std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 80};
         double fps = video_capture_.get(cv::CAP_PROP_FPS);
+        int frame_count = 0;
+        auto start = std::chrono::steady_clock::now();
         //log it
         RCLCPP_INFO(this->get_logger(), "Input Video: %fFPS", fps);
         while (rclcpp::ok() && video_capture_.isOpened())
         {
             if(video_capture_.read(frame)) {
+                auto now = std::chrono::steady_clock::now();
+                std::chrono::duration<double> elapsed = now - start;
+                int minutes = static_cast<int>(elapsed.count()) / 60;
+                int seconds = static_cast<int>(elapsed.count()) % 60;
+
+                RCLCPP_INFO(this->get_logger(), "Streaming... Time Elapsed: %02d:%02d", minutes, seconds);
+                
                 cv::imencode(".jpg", frame, buffer, compression_params);
                 sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
                 std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000000 / fps)));

@@ -52,7 +52,7 @@ private:
     }
 
     void start_receiving() 
-    {
+    {   
         char buffer[65507];
         struct sockaddr_in cliaddr;
         unsigned int len = sizeof(cliaddr);

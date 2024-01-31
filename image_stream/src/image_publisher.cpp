@@ -66,7 +66,7 @@ private:
             if(video_capture_.read(frame)) {
                 cv::imencode(".jpg", frame, buffer, compression_params);
                 sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
-                std::this_thread::sleep_for(std::chrono::nanoseconds(static_cast<int>(1000000000 / fps)));
+                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000000 / fps)));
             } else {
                 std::string end_msg = "END OF STREAM";
                 sendto(sockfd, end_msg.c_str(), end_msg.length(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));

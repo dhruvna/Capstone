@@ -57,9 +57,8 @@ private:
         cv::VideoCapture video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4");
         cv::Mat frame;
         std::vector<uchar> buffer;
-        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 50};
+        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 10};
         double fps = video_capture_.get(cv::CAP_PROP_FPS);
-        int frame_count = 0;
         auto start = std::chrono::steady_clock::now();
         //log it
         RCLCPP_INFO(this->get_logger(), "Input Video: %fFPS", fps);
@@ -75,12 +74,14 @@ private:
 
                 cv::imencode(".jpg", frame, buffer, compression_params);
                 sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
-                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000000 / fps)));
+                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000 / fps)));
             } else {
                 std::string end_msg = "END OF STREAM";
                 sendto(sockfd, end_msg.c_str(), end_msg.length(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
                 RCLCPP_INFO(this->get_logger(), end_msg.c_str());  
-                break;      
+                break;
+                // rclcpp::shutdown();
+                // return;     
             }      
         }
     }

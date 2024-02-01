@@ -22,7 +22,7 @@ public:
 
         this->get_parameter("client_port", client_port);
 
-        RCLCPP_INFO(this->get_logger(), "Initializing with Port: %d", , client_port);
+        RCLCPP_INFO(this->get_logger(), "Initializing with Port: %d", client_port);
 
         init_udp_socket();
     }

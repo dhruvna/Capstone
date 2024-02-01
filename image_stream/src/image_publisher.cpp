@@ -18,13 +18,11 @@ class ImagePublisher : public rclcpp::Node
 public:
     ImagePublisher() : Node("image_publisher"), sockfd(-1)
     {
-        // this->declare_parameter<std::string>("client_ip", "127.0.0.1");
         this->declare_parameter<int>("client_port", 9001);
 
-        this->get_parameter("client_ip", client_ip);
         this->get_parameter("client_port", client_port);
 
-        RCLCPP_INFO(this->get_logger(), "Initializing with IP: %s, Port: %d", client_ip.c_str(), client_port);
+        RCLCPP_INFO(this->get_logger(), "Initializing with Port: %d", , client_port);
 
         init_udp_socket();
     }
@@ -49,11 +47,17 @@ private:
         cliaddr.sin_family = AF_INET;
         cliaddr.sin_port = htons(9001);
         cliaddr.sin_addr.s_addr = INADDR_ANY;
-        // cliaddr.sin_addr.s_addr = inet_addr(client_ip.c_str());
 
-        start_sending();
+        start_sending2();
     }
 
+    void start_sending2() {
+    std::string message = "Hello World";
+    while (rclcpp::ok()) {
+        sendto(sockfd, message.c_str(), message.length(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
+        std::this_thread::sleep_for(std::chrono::seconds(1)); // Send message every second
+    }
+}
     void start_sending()
     {
         cv::VideoCapture video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4");
@@ -89,7 +93,6 @@ private:
     }
     int sockfd;
     struct sockaddr_in cliaddr;
-    std::string client_ip;
     int client_port;
 };
 

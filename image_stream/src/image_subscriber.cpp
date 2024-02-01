@@ -57,7 +57,21 @@ private:
             RCLCPP_ERROR(this->get_logger(), "Bind failed");
             exit(EXIT_FAILURE);
         }
-        start_receiving();
+        start_receiving2();
+    }
+
+    void start_receiving2() {
+        char buffer[1024]; // Buffer for the incoming message
+        struct sockaddr_in cliaddr;
+        unsigned int len = sizeof(cliaddr);
+
+        while (rclcpp::ok()) {
+            int n = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0, (struct sockaddr *)&cliaddr, &len);
+            if (n > 0) {
+                buffer[n] = '\0'; // Null-terminate the received string
+                RCLCPP_INFO(this->get_logger(), "Received message: %s", buffer);
+            }
+        }
     }
 
     void start_receiving() 

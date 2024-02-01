@@ -72,11 +72,11 @@ private:
                 int minutes = static_cast<int>(elapsed.count()) / 60;
                 int seconds = static_cast<int>(elapsed.count()) % 60;
 
-                RCLCPP_INFO(this->get_logger(), "Streaming... Time Elapsed: %02d:%02d", minutes, seconds);
+                // RCLCPP_INFO(this->get_logger(), "Streaming... Time Elapsed: %02d:%02d", minutes, seconds);
 
                 cv::imencode(".jpg", frame, buffer, compression_params);
                 sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
-                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000 / fps)));
+                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1000000 / fps)));
             } else {
                 std::string end_msg = "END OF STREAM";
                 sendto(sockfd, end_msg.c_str(), end_msg.length(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));

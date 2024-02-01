@@ -92,7 +92,7 @@ private:
     int sockfd;
     struct sockaddr_in servaddr;
     std::string publisher_ip;
-    int server_port;
+    int publisher_port;
 };
 
 int main(int argc, char *argv[])

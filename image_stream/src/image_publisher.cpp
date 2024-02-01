@@ -46,7 +46,7 @@ private:
         memset(&cliaddr, 0, sizeof(cliaddr));
         cliaddr.sin_family = AF_INET;
         cliaddr.sin_port = htons(9001);
-        cliaddr.sin_addr.s_addr = INADDR_ANY;
+        cliaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         start_sending2();
     }

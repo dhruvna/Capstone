@@ -16,8 +16,16 @@ class ImageSubscriber : public rclcpp::Node
 public:
     ImageSubscriber() : Node("image_subscriber"), sockfd(-1)
     {
-        this->declare_parameter<int>("server_port", 8080);
-        this->get_parameter("server_port", server_port);
+        std::string publisher_public_ip = "184.187.176.2";
+        int publisher_port = 9001;
+
+        this->declare_parameter<std::string>("publisher_ip", publisher_public_ip);
+        this->declare_parameter<int>("publisher_port", publisher_port);
+
+        this->get_parameter("publisher_ip", publisher_ip);
+        this->get_parameter("publisher_port", publisher_port);
+
+        RCLCPP_INFO(this->get_logger(), "Connecting to Publisher IP: %s, Port: %d", publisher_ip.c_str(), publisher_port);
 
         init_udp_socket();
     }
@@ -40,8 +48,8 @@ private:
         
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(server_port);
-        servaddr.sin_addr.s_addr = INADDR_ANY;
+        servaddr.sin_port = htons(publisher_port);
+        servaddr.sin_addr.s_addr = inet_addr(publisher_ip.c_str());
 
         if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
         {
@@ -83,6 +91,7 @@ private:
 
     int sockfd;
     struct sockaddr_in servaddr;
+    std::string publisher_ip;
     int server_port;
 };
 

@@ -18,11 +18,13 @@ class ImagePublisher : public rclcpp::Node
 public:
     ImagePublisher() : Node("image_publisher"), sockfd(-1)
     {
-        this->declare_parameter<std::string>("client_ip", "127.0.0.1");
-        this->declare_parameter<int>("client_port", 8080);
+        // this->declare_parameter<std::string>("client_ip", "127.0.0.1");
+        this->declare_parameter<int>("client_port", 9001);
 
         this->get_parameter("client_ip", client_ip);
         this->get_parameter("client_port", client_port);
+
+        RCLCPP_INFO(this->get_logger(), "Initializing with IP: %s, Port: %d", client_ip.c_str(), client_port);
 
         init_udp_socket();
     }
@@ -45,9 +47,9 @@ private:
         
         memset(&cliaddr, 0, sizeof(cliaddr));
         cliaddr.sin_family = AF_INET;
-        cliaddr.sin_port = htons(8080);
-        // cliaddr.sin_addr.s_addr = INADDR_ANY;
-        cliaddr.sin_addr.s_addr = inet_addr(client_ip.c_str());
+        cliaddr.sin_port = htons(9001);
+        cliaddr.sin_addr.s_addr = INADDR_ANY;
+        // cliaddr.sin_addr.s_addr = inet_addr(client_ip.c_str());
 
         start_sending();
     }

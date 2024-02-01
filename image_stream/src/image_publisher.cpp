@@ -18,11 +18,11 @@ class ImagePublisher : public rclcpp::Node
 public:
     ImagePublisher() : Node("image_publisher"), sockfd(-1)
     {
-        this->declare_parameter<int>("client_port", 9001);
+        this->declare_parameter<std::string>("client_ip", "10.223.75.168");
+        this->declare_parameter<int>("client_port", 9000);
 
+        this->get_parameter("client_ip", client_ip);
         this->get_parameter("client_port", client_port);
-
-        RCLCPP_INFO(this->get_logger(), "Initializing with Port: %d", client_port);
 
         init_udp_socket();
     }
@@ -45,25 +45,19 @@ private:
         
         memset(&cliaddr, 0, sizeof(cliaddr));
         cliaddr.sin_family = AF_INET;
-        cliaddr.sin_port = htons(9001);
-        cliaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        cliaddr.sin_port = htons(8080);
+        // cliaddr.sin_addr.s_addr = INADDR_ANY;
+        cliaddr.sin_addr.s_addr = inet_addr(client_ip.c_str());
 
-        start_sending2();
+        start_sending();
     }
 
-    void start_sending2() {
-    std::string message = "Hello World";
-    while (rclcpp::ok()) {
-        sendto(sockfd, message.c_str(), message.length(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
-        std::this_thread::sleep_for(std::chrono::seconds(1)); // Send message every second
-    }
-}
     void start_sending()
     {
         cv::VideoCapture video_capture_(ament_index_cpp::get_package_share_directory("image_stream") + "/resource/testvideo.mp4");
         cv::Mat frame;
         std::vector<uchar> buffer;
-        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 10};
+        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 15};
         double fps = video_capture_.get(cv::CAP_PROP_FPS);
         auto start = std::chrono::steady_clock::now();
         //log it
@@ -76,7 +70,7 @@ private:
                 int minutes = static_cast<int>(elapsed.count()) / 60;
                 int seconds = static_cast<int>(elapsed.count()) % 60;
 
-                // RCLCPP_INFO(this->get_logger(), "Streaming... Time Elapsed: %02d:%02d", minutes, seconds);
+                RCLCPP_INFO(this->get_logger(), "Streaming... Time Elapsed: %02d:%02d", minutes, seconds);
 
                 cv::imencode(".jpg", frame, buffer, compression_params);
                 sendto(sockfd, buffer.data(), buffer.size(), 0, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
@@ -93,6 +87,7 @@ private:
     }
     int sockfd;
     struct sockaddr_in cliaddr;
+    std::string client_ip;
     int client_port;
 };
 

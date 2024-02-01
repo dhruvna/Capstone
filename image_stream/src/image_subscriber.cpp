@@ -16,16 +16,8 @@ class ImageSubscriber : public rclcpp::Node
 public:
     ImageSubscriber() : Node("image_subscriber"), sockfd(-1)
     {
-        std::string publisher_public_ip = "192.168.0.2";
-        int publisher_port = 9001;
-
-        this->declare_parameter<std::string>("publisher_ip", publisher_public_ip);
-        this->declare_parameter<int>("publisher_port", publisher_port);
-
-        this->get_parameter("publisher_ip", publisher_ip);
-        this->get_parameter("publisher_port", publisher_port);
-
-        RCLCPP_INFO(this->get_logger(), "Connecting to Publisher IP: %s, Port: %d", publisher_ip.c_str(), publisher_port);
+        this->declare_parameter<int>("server_port", 9000);
+        this->get_parameter("server_port", server_port);
 
         init_udp_socket();
     }
@@ -48,30 +40,15 @@ private:
         
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(publisher_port);
-        servaddr.sin_addr.s_addr = inet_addr(publisher_ip.c_str());
-        // servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        servaddr.sin_port = htons(server_port);
+        servaddr.sin_addr.s_addr = INADDR_ANY;
 
         if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
         {
             RCLCPP_ERROR(this->get_logger(), "Bind failed");
             exit(EXIT_FAILURE);
         }
-        start_receiving2();
-    }
-
-    void start_receiving2() {
-        char buffer[1024]; // Buffer for the incoming message
-        struct sockaddr_in cliaddr;
-        unsigned int len = sizeof(cliaddr);
-
-        while (rclcpp::ok()) {
-            int n = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0, (struct sockaddr *)&cliaddr, &len);
-            if (n > 0) {
-                buffer[n] = '\0'; // Null-terminate the received string
-                RCLCPP_INFO(this->get_logger(), "Received message: %s", buffer);
-            }
-        }
+        start_receiving();
     }
 
     void start_receiving() 
@@ -106,8 +83,7 @@ private:
 
     int sockfd;
     struct sockaddr_in servaddr;
-    std::string publisher_ip;
-    int publisher_port;
+    int server_port;
 };
 
 int main(int argc, char *argv[])

@@ -32,7 +32,7 @@ class ThrusterControl(Node):
             self.pi.set_servo_pulsewidth(12, new_pulsewidth)
             self.current_pulsewidth = new_pulsewidth
             self.get_logger().info(f'Updated pulsewidth: {new_pulsewidth}')
-        delay(0.1)
+        self.delay(0.1);
     
     def delay(self, seconds: float):
         time.sleep(seconds)

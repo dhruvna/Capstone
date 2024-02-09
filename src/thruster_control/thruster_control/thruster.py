@@ -58,35 +58,36 @@ import pigpio
 class ThrusterControl(Node):
     def __init__(self):
         super().__init__('thruster_control')
-        self.pi = pigpio.pi()
+        self.pi = pigpio.pi() # connect to pi
         if not self.pi.connected:
             self.get_logger().error('Not connected to Raspberry Pi GPIO. Exiting...')
             rclpy.shutdown()
 
-        self.joy_subscription = self.create_subscription(
+        self.joy_subscription = self.create_subscription( # subscribes to the joystick input from joy node
             Joy,
             '/joy',
             self.joy_callback,
             10,
             callback_group=ReentrantCallbackGroup())
         
-        self.current_pulsewidth = 1500  # Start with neutral pulse width
-        self.axis_value = 0  # Store the current axis value
-        self.pi.set_servo_pulsewidth(12, self.current_pulsewidth)  # Assume channel 12 for ESC
+        self.current_pulsewidth = 1500  # Initial startup
+        self.delay(0.7)
+        self.axis_value = 0  # Gets and stores latest joystick position
+        self.pi.set_servo_pulsewidth(12, self.current_pulsewidth)  # gpio pin is 12
         
-        self.timer = self.create_timer(0.1, self.timer_callback)  # Adjust pulse width every 0.1 seconds
+        self.timer = self.create_timer(0.1, self.timer_callback)  # Adjust PWM vaue at most every 0.1 seconds
         
         self.get_logger().info('Thruster control initialized.')
 
     def joy_callback(self, msg):
-        # Update the stored axis value
+        # Sets axis to be vertical joystick axis only
         self.axis_value = msg.axes[1]
 
     def timer_callback(self):
-        # Use the stored axis value to adjust the pulse width
+        # Use the stored axis value to adjust PWM value
         adjustment = self.axis_value * 10  # Smaller scale factor for smoother adjustment
-        new_pulsewidth = max(1000, min(2000, self.current_pulsewidth + adjustment))
-        if new_pulsewidth != self.current_pulsewidth:
+        new_pulsewidth = max(1100, min(1900, self.current_pulsewidth + adjustment))
+        if new_pulsewidth != self.current_pulsewidth: #updates PWM value if joystick moved
             self.pi.set_servo_pulsewidth(12, new_pulsewidth)
             self.current_pulsewidth = new_pulsewidth
             self.get_logger().info(f'Updated pulsewidth: {new_pulsewidth}')

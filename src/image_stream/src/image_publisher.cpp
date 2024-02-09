@@ -70,7 +70,7 @@ private:
         cv::VideoCapture video_capture_(0);
         cv::Mat frame;
         std::vector<uchar> buffer;
-        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 10};
+        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 80};
         double fps = video_capture_.get(cv::CAP_PROP_FPS);
         auto start = std::chrono::steady_clock::now();
         //log it
